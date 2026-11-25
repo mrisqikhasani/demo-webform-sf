@@ -978,24 +978,28 @@
 
       async function init() {
         try {
-          var results = await Promise.all([
-            apiRequest("/options"),
-            apiRequest("/branches?limit=100")
-          ]);
+          // Single bootstrap call — returns options + ALL branches with slots & events embedded
+          var result = await apiRequest("/bootstrap");
+          var d = result.data || {};
+          var opts = d.options || {};
 
-          var optData = results[0].data || {};
-          S.domiciles = optData.domiciles || [];
-          S.investmentGoals = optData.investmentGoals || [];
-          S.branches = results[1].data || [];
+          S.domiciles       = opts.domiciles       || [];
+          S.investmentGoals = opts.investmentGoals || [];
+          S.branches        = d.branches           || [];
+
+          // Pre-populate the slot/event cache directly from bootstrap data
+          // → selectBranch() will always hit cache = zero extra API calls on expand
+          S.branches.forEach(function (b) {
+            S.slotsByBranch[b.publicCode]  = b.slots  || [];
+            S.eventsByBranch[b.publicCode] = b.events || [];
+          });
 
           renderDomiciles();
           renderChips();
 
           if (S.branches.length > 0) {
-            // Eagerly fetch first branch (blocking, shown to user)
             await selectBranch(S.branches[0].publicCode);
-            // Silently prefetch all remaining branches in background
-            prefetchAll();
+            // No prefetchAll() needed — everything is already loaded from bootstrap!
           } else {
             drawOffices();
           }
@@ -1035,11 +1039,11 @@
         clr("ch");
       });
 
-      // Core fetch: get slots + events for one branch, store in cache
+      // Fallback fetch for a single branch — used after booking to refresh availability
       async function fetchBranchData(branchCode) {
         var today = new Date();
         var fromStr = ymd(today);
-        var toSlot = new Date(today); toSlot.setDate(today.getDate() + 14);
+        var toSlot  = new Date(today); toSlot.setDate(today.getDate() + 14);
         var toEvent = new Date(today); toEvent.setDate(today.getDate() + 60);
 
         var res = await Promise.all([
@@ -1047,44 +1051,25 @@
           apiRequest("/branches/" + encodeURIComponent(branchCode) + "/events?from=" + fromStr + "&to=" + ymd(toEvent))
         ]);
 
-        S.slotsByBranch[branchCode] = res[0].data || [];
+        S.slotsByBranch[branchCode]  = res[0].data || [];
         S.eventsByBranch[branchCode] = res[1].data || [];
-      }
-
-      // Background prefetch: silently loads all branches that aren't cached yet
-      async function prefetchAll() {
-        for (var i = 0; i < S.branches.length; i++) {
-          var code = S.branches[i].publicCode;
-          // Skip if already cached or currently being fetched
-          if (S.slotsByBranch[code] !== undefined || S.prefetching[code]) continue;
-          S.prefetching[code] = true;
-          try {
-            await fetchBranchData(code);
-            // Re-render office list so meta counts update (e.g. "3 Acara")
-            if (S.activeBranchCode !== code) drawOffices();
-          } catch (e) {
-            // Silently ignore prefetch errors — will retry on click
-          } finally {
-            delete S.prefetching[code];
-          }
-        }
       }
 
       async function selectBranch(branchCode) {
         S.activeBranchCode = branchCode;
-        S.tab = "jadwal";
-        S.day = null;
+        S.tab    = "jadwal";
+        S.day    = null;
         S.slotId = null;
 
         var alreadyCached = S.slotsByBranch[branchCode] !== undefined;
 
         if (alreadyCached) {
-          // ✅ Instant render — data already in cache (prefetched in background)
+          // ✅ Instant render — data came from /bootstrap (or was fetched before)
           var firstBookable = S.slotsByBranch[branchCode].find(function (s) { return s.bookable; });
           if (firstBookable) S.day = firstBookable.date;
           drawOffices();
         } else {
-          // ⏳ Not yet prefetched — show loading state and fetch now
+          // ⚠️ Fallback: bootstrap didn't include this branch — fetch individually
           S.loadingBranch = true;
           drawOffices();
           try {
