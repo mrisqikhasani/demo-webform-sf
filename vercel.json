@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "public": true,
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/api/reservation/v1/(.*)",
+      "destination": "/api/reservation/v1/proxy?sfpath=$1"
+    }
+  ]
+}
