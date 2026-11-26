@@ -885,31 +885,22 @@
       }
 
       function initMap() {
-       
+
       }
 
       function focusMapOnBranch(branch) {
         $("pinLabel").textContent = branch ? branch.name : "Indonesia";
-        if (!mapInstance || !branch) return;
-
-        // Update warna ikon semua marker
-        Object.keys(markerByCode).forEach(function (code) {
-          var m = markerByCode[code];
-          if (m && activeMarkerIcon && defaultMarkerIcon) {
-            m.setIcon(code === branch.publicCode ? activeMarkerIcon : defaultMarkerIcon);
-            m.setZIndexOffset(code === branch.publicCode ? 1000 : 0);
-          }
-        });
+        if (!branch) return;
 
         var lat = parseFloat(branch.latitude);
         var lng = parseFloat(branch.longitude);
-        var activeMarker = markerByCode[branch.publicCode];
+        var frame = $("branchMapFrame");
+        if (!frame) return;
 
         if (!isNaN(lat) && !isNaN(lng)) {
-          mapInstance.flyTo([lat, lng], 15, { duration: 0.7 });
-          if (activeMarker) {
-            activeMarker.openPopup();
-          }
+          frame.src = "https://maps.google.com/maps?q=" + lat + "," + lng + "&z=15&output=embed";
+        } else if (branch.address || branch.name) {
+          frame.src = "https://maps.google.com/maps?q=" + encodeURIComponent(branch.name + " " + (branch.address || "")) + "&z=15&output=embed";
         }
       }
 
