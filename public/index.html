@@ -781,7 +781,10 @@
 
         <!-- Peta Interaktif Asli -->
         <div class="map">
-          <div id="branchMap" aria-label="Peta lokasi kantor cabang Mirae Asset"></div>
+          <iframe id="branchMapFrame" title="Peta lokasi kantor cabang Mirae Asset" width="100%" height="100%"
+            style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+            src="https://maps.google.com/maps?q=-6.22792,106.80583&z=15&output=embed">
+          </iframe>
           <div class="pin"><span class="pin-dot"></span><span id="pinLabel">Memuat lokasi...</span></div>
         </div>
 
@@ -882,55 +885,7 @@
       }
 
       function initMap() {
-        if (!window.L || mapInstance) return;
-
-        // Default center: Jakarta SCBD
-        mapInstance = L.map("branchMap", {
-          center: [-6.22792, 106.80583],
-          zoom: 14,
-          scrollWheelZoom: false
-        });
-
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          attribution: '&copy; OpenStreetMap &copy; CARTO',
-          subdomains: "abcd",
-          maxZoom: 19
-        }).addTo(mapInstance);
-
-        activeMarkerIcon = L.divIcon({
-          className: "mirae-marker",
-          html: '<div class="mirae-marker-pulse"><div class="mirae-marker-core"></div></div>',
-          iconSize: [28, 28],
-          iconAnchor: [14, 14],
-          popupAnchor: [0, -14]
-        });
-
-        defaultMarkerIcon = L.divIcon({
-          className: "mirae-marker",
-          html: '<div class="mirae-marker-core" style="background:#2a4b9b"></div>',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7],
-          popupAnchor: [0, -8]
-        });
-
-        // Render marker untuk setiap cabang yang memiliki koordinat
-        S.branches.forEach(function (b) {
-          var lat = parseFloat(b.latitude);
-          var lng = parseFloat(b.longitude);
-          if (isNaN(lat) || isNaN(lng)) return;
-
-          var marker = L.marker([lat, lng], { icon: defaultMarkerIcon }).addTo(mapInstance);
-          marker.bindPopup(
-            "<b>" + esc(b.name) + "</b><br>" +
-            "<span style='color:#6b7280'>" + esc(b.address || b.city || "") + "</span>"
-          );
-          marker.on("click", function () {
-            if (S.activeBranchCode !== b.publicCode) {
-              selectBranch(b.publicCode);
-            }
-          });
-          markerByCode[b.publicCode] = marker;
-        });
+       
       }
 
       function focusMapOnBranch(branch) {
@@ -1115,10 +1070,10 @@
         if (S.loadingBranch) {
           return [
             '<div class="panel">',
-              '<div class="sk-panel">',
-                '<div class="sk sk-ev"></div>',
-                '<div class="sk sk-ev"></div>',
-              '</div>',
+            '<div class="sk-panel">',
+            '<div class="sk sk-ev"></div>',
+            '<div class="sk sk-ev"></div>',
+            '</div>',
             '</div>'
           ].join('');
         }
