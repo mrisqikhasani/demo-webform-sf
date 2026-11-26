@@ -4,9 +4,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Booking Konsultasi - Mirae Asset Sekuritas</title>
+  <title>Pendaftaran Acara - Mirae Asset Sekuritas</title>
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Outfit:wght@400;500;600&display=swap">
+  <!-- Leaflet CSS untuk Peta Interaktif Asli -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <style>
     :root {
       --bg: #fff;
@@ -32,7 +35,9 @@
       scroll-padding-top: env(safe-area-inset-top, 0px)
     }
 
-    * {
+    *,
+    *::before,
+    *::after {
       box-sizing: border-box
     }
 
@@ -265,9 +270,6 @@
 
     .in:focus,
     .chip:focus-visible,
-    .otab:focus-visible,
-    .day:focus-visible,
-    .slot:focus-visible,
     .osum:focus-visible,
     button:focus-visible {
       border-color: var(--or);
@@ -328,32 +330,85 @@
       font-size: 14px
     }
 
+    /* ── Real Interactive Map Container ── */
     .map {
       position: relative;
-      height: 260px;
+      height: 280px;
       border: 1px solid var(--line);
       border-radius: 4px;
       overflow: hidden;
-      background: var(--dis)
+      background: var(--dis);
+      z-index: 1
     }
 
-    .map svg {
+    #branchMap {
       width: 100%;
       height: 100%;
-      display: block
+      z-index: 1
     }
 
     .pin {
       position: absolute;
       left: 12px;
       bottom: 12px;
+      z-index: 500;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 999px;
-      padding: 6px 10px;
+      padding: 6px 12px;
       font-size: 11px;
       font-weight: 600;
-      color: var(--mute)
+      color: var(--ink);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .12);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: none
+    }
+
+    .pin-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--or);
+      display: inline-block
+    }
+
+    /* Custom Leaflet Pin */
+    .mirae-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .mirae-marker-pulse {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(229, 138, 43, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .mirae-marker-core {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--or);
+      border: 2.5px solid #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3)
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 8px;
+      font-family: "Noto Sans KR", sans-serif
+    }
+
+    .leaflet-popup-content {
+      margin: 10px 12px;
+      font-size: 12px;
+      line-height: 1.45
     }
 
     .search {
@@ -408,46 +463,27 @@
       flex: none
     }
 
-    .panel {
-      border-top: 1px solid var(--orline);
-      padding: 0 14px 14px
-    }
-
-    .otabs {
-      display: flex;
-      gap: 18px;
-      border-bottom: 1px solid var(--line);
-      padding-top: 12px
-    }
-
-    .otab {
-      background: 0;
-      border: 0;
-      padding: 0 0 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--mute);
-      position: relative
-    }
-
-    .otab.on {
+    .ocard.on .ometa {
       color: var(--or)
     }
 
-    .otab.on:after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -1px;
-      height: 2px;
-      background: var(--or)
+    .panel {
+      border-top: 1px solid var(--orline);
+      padding: 4px 14px 14px
     }
 
-    .pt {
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      margin-bottom: 4px
+    }
+
+    .panel-title {
       font-size: 13px;
       font-weight: 700;
-      margin: 14px 0 0
+      color: var(--or)
     }
 
     .pd {
@@ -456,100 +492,25 @@
       margin: 3px 0 0
     }
 
-    .days {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px
-    }
-
-    .day {
-      text-align: left;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      min-width: 74px;
-      padding: 8px 10px
-    }
-
-    .day small {
-      display: block;
-      font-size: 11px;
-      color: var(--mute)
-    }
-
-    .day b {
-      display: block;
-      margin-top: 4px;
-      font-size: 13px;
-      font-weight: 500
-    }
-
-    .day.on,
-    .slot.on {
-      background: var(--ortint);
-      border-color: var(--orline)
-    }
-
-    .slot.on {
-      color: var(--or)
-    }
-
-    .day:disabled,
-    .slot:disabled {
-      background: var(--dis);
-      color: var(--soft);
-      cursor: not-allowed
-    }
-
-    .day:disabled small,
-    .day:disabled b {
-      color: var(--soft)
-    }
-
-    .slots {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-top: 10px
-    }
-
-    @media(max-width:767px) {
-      .slots {
-        grid-template-columns: repeat(3, 1fr)
-      }
-    }
-
-    .slot {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 13px;
-      font-weight: 600
-    }
-
-    .slot:disabled {
-      text-decoration: line-through
-    }
-
     .ev {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
       border: 1px solid var(--line);
       border-radius: 4px;
-      padding: 10px;
+      padding: 12px;
       margin-top: 10px
     }
 
     .ev.on {
-      border-color: var(--orline)
+      border-color: var(--orline);
+      background: #fffaf5
     }
 
     .ev h4 {
       margin: 0;
-      font-size: 14px
+      font-size: 14px;
+      color: var(--ink)
     }
 
     .ev p {
@@ -586,8 +547,8 @@
       border: 1px solid var(--line);
       background: var(--panel);
       border-radius: 4px;
-      padding: 7px 12px;
-      font-size: 11px;
+      padding: 8px 14px;
+      font-size: 12px;
       font-weight: 600
     }
 
@@ -607,7 +568,7 @@
       border: 1px dashed var(--line);
       border-radius: 4px;
       padding: 16px;
-      margin-top: 12px;
+      margin-top: 10px;
       font-size: 12px;
       color: var(--soft)
     }
@@ -736,8 +697,13 @@
 
     /* ── Skeleton / shimmer loader ── */
     @keyframes shimmer {
-      0%   { background-position: -600px 0 }
-      100% { background-position:  600px 0 }
+      0% {
+        background-position: -600px 0
+      }
+
+      100% {
+        background-position: 600px 0
+      }
     }
 
     .sk {
@@ -748,41 +714,15 @@
     }
 
     .sk-panel {
-      padding: 16px 14px;
+      padding: 14px 0 4px;
       display: grid;
-      gap: 14px;
+      gap: 10px;
     }
 
-    .sk-tabs {
-      display: flex;
-      gap: 18px;
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 12px;
+    .sk-ev {
+      height: 78px;
+      border-radius: 6px;
     }
-
-    .sk-tab  { height: 14px; border-radius: 4px; }
-    .sk-label { height: 13px; border-radius: 4px; margin-bottom: 10px; }
-
-    .sk-days {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .sk-day  { width: 74px; height: 54px; border-radius: 8px; }
-
-    .sk-slots {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    @media(max-width:767px) {
-      .sk-slots { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    .sk-slot { height: 42px; border-radius: 8px; }
   </style>
 </head>
 
@@ -835,32 +775,18 @@
 
       <section class="planner">
         <div>
-          <h2>Jadwalkan Kunjungan Anda</h2>
-          <p>Pilih lokasi Investment Specialist, lalu atur hari kunjungan atau daftar acara cabang.</p>
+          <h2>Daftar Acara Cabang</h2>
+          <p>Pilih lokasi cabang Mirae Asset, lalu pilih acara investasi yang ingin Anda ikuti.</p>
         </div>
-        <div class="map"><svg viewBox="0 0 600 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <rect width="600" height="220" fill="#eef1f4" />
-            <rect x="40" y="10" width="120" height="70" fill="#cfe8cf" />
-            <rect x="430" y="140" width="110" height="60" fill="#cfe8cf" />
-            <rect x="250" y="150" width="60" height="50" fill="#f4ead6" />
-            <g stroke="#fff" stroke-width="10" fill="none">
-              <path d="M0 150 L600 90" />
-              <path d="M180 0 L240 220" />
-              <path d="M400 0 L360 220" />
-            </g>
-            <g stroke="#fff" stroke-width="4" fill="none">
-              <path d="M0 60 L600 40" />
-              <path d="M0 200 L600 170" />
-              <path d="M80 0 L100 220" />
-              <path d="M520 0 L500 220" />
-            </g>
-            <circle id="pinDot" cx="300" cy="110" r="9" fill="#d93025" />
-            <circle id="pinRing" cx="300" cy="110" r="18" fill="#d9302533" />
-          </svg>
-          <div class="pin" id="pinLabel">Memuat lokasi...</div>
+
+        <!-- Peta Interaktif Asli -->
+        <div class="map">
+          <div id="branchMap" aria-label="Peta lokasi kantor cabang Mirae Asset"></div>
+          <div class="pin"><span class="pin-dot"></span><span id="pinLabel">Memuat lokasi...</span></div>
         </div>
+
         <div class="search"><span class="lab" style="position:absolute;left:-9999px">Cari kantor</span><input class="in"
-            id="q" placeholder="Cari kantor tujuan Anda" autocomplete="off" spellcheck="false"></div>
+            id="q" placeholder="Cari kantor cabang tujuan Anda" autocomplete="off" spellcheck="false"></div>
         <div id="olist" style="display:grid;gap:8px">
           <div class="empty"><b>Memuat daftar cabang dari Salesforce...</b>Mohon tunggu sebentar.</div>
         </div>
@@ -882,7 +808,7 @@
           <p class="ben"><i>✓</i>Tanpa kewajiban transaksi</p>
           <p class="ben"><i>✓</i>Data Anda dilindungi sesuai standar keamanan perusahaan</p>
         </div>
-        <button class="submit" id="go" type="button">Daftar &amp; Atur Jadwal</button>
+        <button class="submit" id="go" type="button">Daftar Acara</button>
       </div>
     </div>
   </div>
@@ -900,9 +826,12 @@
     </div>
   </div>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
   <script>
     (function () {
-      // Mengarah langsung ke Vercel Serverless Function Proxy (/api/reservation/v1/[...path].js)
       var API_CONFIG = {
         baseUrl: "/api/reservation/v1",
         accessToken: ""
@@ -913,21 +842,22 @@
         investmentGoals: [],
         branches: [],
         activeBranchCode: null,
-        tab: "jadwal",
-        slotsByBranch: {},
         eventsByBranch: {},
-        prefetching: {},      // track which branches are being bg-fetched
+        prefetching: {},
         loadingBranch: false,
         submitting: false,
-        day: null,
-        slotId: null,
         tags: [],
         selectedEvents: {},
         q: ""
       };
 
+      // State Peta Leaflet
+      var mapInstance = null;
+      var markerByCode = {};
+      var activeMarkerIcon = null;
+      var defaultMarkerIcon = null;
+
       var $ = function (id) { return document.getElementById(id); };
-      var DN = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
       var MN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
       function esc(s) {
@@ -949,6 +879,83 @@
       function uuid() {
         if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
         return "sub-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+      }
+
+      function initMap() {
+        if (!window.L || mapInstance) return;
+
+        // Default center: Jakarta SCBD
+        mapInstance = L.map("branchMap", {
+          center: [-6.22792, 106.80583],
+          zoom: 14,
+          scrollWheelZoom: false
+        });
+
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+          attribution: '&copy; OpenStreetMap &copy; CARTO',
+          subdomains: "abcd",
+          maxZoom: 19
+        }).addTo(mapInstance);
+
+        activeMarkerIcon = L.divIcon({
+          className: "mirae-marker",
+          html: '<div class="mirae-marker-pulse"><div class="mirae-marker-core"></div></div>',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -14]
+        });
+
+        defaultMarkerIcon = L.divIcon({
+          className: "mirae-marker",
+          html: '<div class="mirae-marker-core" style="background:#2a4b9b"></div>',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+          popupAnchor: [0, -8]
+        });
+
+        // Render marker untuk setiap cabang yang memiliki koordinat
+        S.branches.forEach(function (b) {
+          var lat = parseFloat(b.latitude);
+          var lng = parseFloat(b.longitude);
+          if (isNaN(lat) || isNaN(lng)) return;
+
+          var marker = L.marker([lat, lng], { icon: defaultMarkerIcon }).addTo(mapInstance);
+          marker.bindPopup(
+            "<b>" + esc(b.name) + "</b><br>" +
+            "<span style='color:#6b7280'>" + esc(b.address || b.city || "") + "</span>"
+          );
+          marker.on("click", function () {
+            if (S.activeBranchCode !== b.publicCode) {
+              selectBranch(b.publicCode);
+            }
+          });
+          markerByCode[b.publicCode] = marker;
+        });
+      }
+
+      function focusMapOnBranch(branch) {
+        $("pinLabel").textContent = branch ? branch.name : "Indonesia";
+        if (!mapInstance || !branch) return;
+
+        // Update warna ikon semua marker
+        Object.keys(markerByCode).forEach(function (code) {
+          var m = markerByCode[code];
+          if (m && activeMarkerIcon && defaultMarkerIcon) {
+            m.setIcon(code === branch.publicCode ? activeMarkerIcon : defaultMarkerIcon);
+            m.setZIndexOffset(code === branch.publicCode ? 1000 : 0);
+          }
+        });
+
+        var lat = parseFloat(branch.latitude);
+        var lng = parseFloat(branch.longitude);
+        var activeMarker = markerByCode[branch.publicCode];
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          mapInstance.flyTo([lat, lng], 15, { duration: 0.7 });
+          if (activeMarker) {
+            activeMarker.openPopup();
+          }
+        }
       }
 
       async function apiRequest(path, options) {
@@ -978,28 +985,24 @@
 
       async function init() {
         try {
-          // Single bootstrap call — returns options + ALL branches with slots & events embedded
           var result = await apiRequest("/bootstrap");
           var d = result.data || {};
           var opts = d.options || {};
 
-          S.domiciles       = opts.domiciles       || [];
+          S.domiciles = opts.domiciles || [];
           S.investmentGoals = opts.investmentGoals || [];
-          S.branches        = d.branches           || [];
+          S.branches = d.branches || [];
 
-          // Pre-populate the slot/event cache directly from bootstrap data
-          // → selectBranch() will always hit cache = zero extra API calls on expand
           S.branches.forEach(function (b) {
-            S.slotsByBranch[b.publicCode]  = b.slots  || [];
             S.eventsByBranch[b.publicCode] = b.events || [];
           });
 
           renderDomiciles();
           renderChips();
+          initMap();
 
           if (S.branches.length > 0) {
             await selectBranch(S.branches[0].publicCode);
-            // No prefetchAll() needed — everything is already loaded from bootstrap!
           } else {
             drawOffices();
           }
@@ -1039,45 +1042,30 @@
         clr("ch");
       });
 
-      // Fallback fetch for a single branch — used after booking to refresh availability
-      async function fetchBranchData(branchCode) {
+      // Fallback fetch khusus event setelah booking berhasil
+      async function fetchBranchEvents(branchCode) {
         var today = new Date();
         var fromStr = ymd(today);
-        var toSlot  = new Date(today); toSlot.setDate(today.getDate() + 14);
-        var toEvent = new Date(today); toEvent.setDate(today.getDate() + 60);
+        var toEvent = new Date(today);
+        toEvent.setDate(today.getDate() + 60);
 
-        var res = await Promise.all([
-          apiRequest("/branches/" + encodeURIComponent(branchCode) + "/slots?from=" + fromStr + "&to=" + ymd(toSlot)),
-          apiRequest("/branches/" + encodeURIComponent(branchCode) + "/events?from=" + fromStr + "&to=" + ymd(toEvent))
-        ]);
-
-        S.slotsByBranch[branchCode]  = res[0].data || [];
-        S.eventsByBranch[branchCode] = res[1].data || [];
+        var res = await apiRequest("/branches/" + encodeURIComponent(branchCode) + "/events?from=" + fromStr + "&to=" + ymd(toEvent));
+        S.eventsByBranch[branchCode] = res.data || [];
       }
 
       async function selectBranch(branchCode) {
         S.activeBranchCode = branchCode;
-        S.tab    = "jadwal";
-        S.day    = null;
-        S.slotId = null;
-
-        var alreadyCached = S.slotsByBranch[branchCode] !== undefined;
+        var alreadyCached = S.eventsByBranch[branchCode] !== undefined;
 
         if (alreadyCached) {
-          // ✅ Instant render — data came from /bootstrap (or was fetched before)
-          var firstBookable = S.slotsByBranch[branchCode].find(function (s) { return s.bookable; });
-          if (firstBookable) S.day = firstBookable.date;
           drawOffices();
         } else {
-          // ⚠️ Fallback: bootstrap didn't include this branch — fetch individually
           S.loadingBranch = true;
           drawOffices();
           try {
-            await fetchBranchData(branchCode);
-            var firstBookable = S.slotsByBranch[branchCode].find(function (s) { return s.bookable; });
-            if (firstBookable) S.day = firstBookable.date;
+            await fetchBranchEvents(branchCode);
           } catch (err) {
-            showNote("Gagal memuat jadwal cabang: " + err.message);
+            showNote("Gagal memuat daftar acara cabang: " + err.message);
           } finally {
             S.loadingBranch = false;
             drawOffices();
@@ -1089,20 +1077,18 @@
         var q = S.q.trim().toLowerCase();
         var h = "";
         var any = false;
-        var activeIdx = 0;
 
-        S.branches.forEach(function (b, i) {
+        S.branches.forEach(function (b) {
           var hay = (b.name + " " + (b.address || "") + " " + (b.city || "")).toLowerCase();
           if (q && hay.indexOf(q) < 0) return;
           any = true;
 
           var on = S.activeBranchCode === b.publicCode;
-          if (on) activeIdx = i;
           var evs = S.eventsByBranch[b.publicCode] || [];
           var metaText = S.prefetching[b.publicCode]
             ? "Memuat..."
             : S.eventsByBranch[b.publicCode] !== undefined
-              ? (evs.length ? evs.length + " Acara" : "Jadwal Tersedia")
+              ? (evs.length ? evs.length + " Acara" : "Belum ada acara")
               : "Pilih cabang";
 
           h += '<article class="ocard' + (on ? ' on' : '') + '">';
@@ -1122,109 +1108,41 @@
         $("olist").innerHTML = h;
 
         var activeBranch = S.branches.find(function (b) { return b.publicCode === S.activeBranchCode; });
-        $("pinLabel").textContent = activeBranch ? activeBranch.name : "Indonesia";
-        var x = 120 + (activeIdx * 47) % 360;
-        var y = 60 + (activeIdx * 31) % 100;
-        $("pinDot").setAttribute("cx", x); $("pinDot").setAttribute("cy", y);
-        $("pinRing").setAttribute("cx", x); $("pinRing").setAttribute("cy", y);
+        focusMapOnBranch(activeBranch);
       }
 
       function renderBranchPanel(branch) {
         if (S.loadingBranch) {
-          // ── Skeleton shimmer while fetching ──
           return [
             '<div class="panel">',
               '<div class="sk-panel">',
-                // Fake tabs
-                '<div class="sk-tabs">',
-                  '<div class="sk sk-tab" style="width:110px"></div>',
-                  '<div class="sk sk-tab" style="width:72px"></div>',
-                '</div>',
-                // Fake label
-                '<div class="sk sk-label" style="width:130px"></div>',
-                // Fake day chips
-                '<div class="sk-days">',
-                  '<div class="sk sk-day"></div>',
-                  '<div class="sk sk-day"></div>',
-                  '<div class="sk sk-day"></div>',
-                  '<div class="sk sk-day"></div>',
-                  '<div class="sk sk-day"></div>',
-                '</div>',
-                // Fake slot label
-                '<div class="sk sk-label" style="width:80px;margin-top:4px"></div>',
-                // Fake time slots
-                '<div class="sk-slots">',
-                  '<div class="sk sk-slot"></div>',
-                  '<div class="sk sk-slot"></div>',
-                  '<div class="sk sk-slot"></div>',
-                  '<div class="sk sk-slot"></div>',
-                '</div>',
+                '<div class="sk sk-ev"></div>',
+                '<div class="sk sk-ev"></div>',
               '</div>',
             '</div>'
           ].join('');
         }
 
-        var slots = S.slotsByBranch[branch.publicCode] || [];
         var events = S.eventsByBranch[branch.publicCode] || [];
+        var h = '<div class="panel">';
+        h += '<div class="panel-head"><span class="panel-title">Daftar Acara Tersedia' + (events.length ? ' (' + events.length + ')' : '') + '</span></div>';
 
-        var h = '<div class="panel"><div class="otabs">';
-        h += '<button type="button" class="otab' + (S.tab === "jadwal" ? ' on' : '') + '" data-tab="jadwal">Jadwal kunjungan</button>';
-        h += '<button type="button" class="otab' + (S.tab === "acara" ? ' on' : '') + '" data-tab="acara">Acara' + (events.length ? ' (' + events.length + ')' : '') + '</button>';
-        h += '</div>';
-
-        if (S.tab === "jadwal") {
-          var dateMap = {};
-          slots.forEach(function (sl) {
-            if (!dateMap[sl.date]) dateMap[sl.date] = [];
-            dateMap[sl.date].push(sl);
-          });
-          var uniqueDates = Object.keys(dateMap).sort();
-
-          if (!uniqueDates.length) {
-            h += '<div class="empty"><b>Belum ada slot kunjungan tersedia</b>Silakan pilih cabang lain atau cek tab Acara.</div>';
-          } else {
-            h += '<p class="pt">Pilih hari kunjungan</p><p class="pd">Pilih tanggal dan jam konsultasi yang tersedia (WIB).</p><div class="days">';
-            uniqueDates.forEach(function (dateStr) {
-              var parts = dateStr.split("-");
-              var dtObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-              var daySlots = dateMap[dateStr];
-              var allFull = daySlots.every(function (sl) { return !sl.bookable; });
-
-              h += '<button type="button" class="day' + (S.day === dateStr ? ' on' : '') + '" data-d="' + esc(dateStr) + '"' + (allFull ? ' disabled' : '') + '>';
-              h += '<small>' + DN[dtObj.getDay()] + '</small><b>' + dtObj.getDate() + ' ' + MN[dtObj.getMonth()] + '</b></button>';
-            });
-            h += '</div>';
-
-            if (S.day && dateMap[S.day]) {
-              h += '<p class="pt">Pilih jam</p><div class="slots">';
-              dateMap[S.day].forEach(function (sl) {
-                var isSelected = S.slotId === sl.id;
-                h += '<button type="button" class="slot' + (isSelected ? ' on' : '') + '" data-sid="' + esc(sl.id) + '"' + (!sl.bookable ? ' disabled' : '') + '>';
-                h += esc(sl.start) + ' <small style="font-weight:400;font-size:11px">(' + sl.remaining + ')</small></button>';
-              });
-              h += '</div>';
-            } else {
-              h += '<div class="empty"><b>Belum ada hari dipilih</b>Pilih satu hari di atas untuk melihat jam yang tersedia.</div>';
-            }
-          }
+        if (!events.length) {
+          h += '<div class="empty"><b>Belum ada acara</b>Kantor cabang ini belum menjadwalkan acara mendatang. Silakan pilih cabang lainnya.</div>';
         } else {
-          if (!events.length) {
-            h += '<div class="empty"><b>Belum ada acara</b>Kantor ini belum menjadwalkan acara mendatang. Anda tetap bisa membuat jadwal kunjungan.</div>';
-          } else {
-            events.forEach(function (ev) {
-              var isReg = !!S.selectedEvents[ev.id];
-              var disabledAttr = (!ev.bookable && !isReg) ? ' disabled' : '';
-              var btnLabel = isReg ? 'Terpilih ✓' : (ev.bookable ? 'Daftar acara' : 'Kuota Penuh');
+          events.forEach(function (ev) {
+            var isReg = !!S.selectedEvents[ev.id];
+            var disabledAttr = (!ev.bookable && !isReg) ? ' disabled' : '';
+            var btnLabel = isReg ? 'Terpilih ✓' : (ev.bookable ? 'Daftar acara' : 'Kuota Penuh');
 
-              h += '<div class="ev' + (isReg ? ' on' : '') + '">';
-              h += '<div><h4>' + esc(ev.name) + '</h4><p>' + esc(ev.description || '') + '</p>';
-              h += '<div class="evm"><b>' + fmtDate(ev.date) + '</b>' + (ev.timeRange ? ', ' + esc(ev.timeRange) : '') + ' · Sisa kuota: <b>' + ev.remaining + '</b></div>';
-              if (ev.type) h += '<span class="tag">' + esc(ev.type) + '</span>';
-              h += '</div>';
-              h += '<button type="button" class="reg' + (isReg ? ' on' : '') + '" data-eid="' + esc(ev.id) + '"' + disabledAttr + '>' + btnLabel + '</button>';
-              h += '</div>';
-            });
-          }
+            h += '<div class="ev' + (isReg ? ' on' : '') + '">';
+            h += '<div><h4>' + esc(ev.name) + '</h4><p>' + esc(ev.description || '') + '</p>';
+            h += '<div class="evm"><b>' + fmtDate(ev.date) + '</b>' + (ev.timeRange ? ', ' + esc(ev.timeRange) : '') + ' · Sisa kuota: <b>' + ev.remaining + '</b></div>';
+            if (ev.type) h += '<span class="tag">' + esc(ev.type) + '</span>';
+            h += '</div>';
+            h += '<button type="button" class="reg' + (isReg ? ' on' : '') + '" data-eid="' + esc(ev.id) + '"' + disabledAttr + '>' + btnLabel + '</button>';
+            h += '</div>';
+          });
         }
 
         return h + '</div>';
@@ -1241,21 +1159,13 @@
           }
           return;
         }
-        if (b.hasAttribute("data-tab")) {
-          S.tab = b.getAttribute("data-tab");
-        } else if (b.hasAttribute("data-d")) {
-          S.day = b.getAttribute("data-d");
-          S.slotId = null;
-        } else if (b.hasAttribute("data-sid")) {
-          var sid = b.getAttribute("data-sid");
-          S.slotId = (S.slotId === sid) ? null : sid;
-        } else if (b.hasAttribute("data-eid")) {
+        if (b.hasAttribute("data-eid")) {
           var eid = b.getAttribute("data-eid");
           if (S.selectedEvents[eid]) delete S.selectedEvents[eid];
           else S.selectedEvents[eid] = true;
+          drawOffices();
+          $("note").hidden = true;
         }
-        drawOffices();
-        $("note").hidden = true;
       });
 
       $("q").addEventListener("input", function () {
@@ -1318,8 +1228,8 @@
         }
 
         var selectedEventIds = Object.keys(S.selectedEvents);
-        if (!S.slotId && selectedEventIds.length === 0) {
-          showNote("Pilih minimal satu jam kunjungan pada tab 'Jadwal kunjungan' atau pilih acara pada tab 'Acara'.");
+        if (selectedEventIds.length === 0) {
+          showNote("Pilih minimal satu acara pada daftar cabang di atas.");
           return;
         }
 
@@ -1333,7 +1243,7 @@
           },
           investmentGoals: S.tags,
           branchCode: S.activeBranchCode,
-          visit: S.slotId ? { slotId: S.slotId } : null,
+          visit: null,
           events: selectedEventIds,
           consent: { given: true, at: new Date().toISOString() }
         };
@@ -1356,23 +1266,24 @@
           }).join("\n");
 
           $("mt").textContent = "Pendaftaran Berhasil!";
-          $("mp").textContent = "Terima kasih, " + v.fn + ". Data reservasi Anda telah tercatat di sistem Mirae Asset:\n\n" + summaryLines;
+          $("mp").textContent = "Terima kasih, " + v.fn + ". Data pendaftaran acara Anda telah tercatat di sistem Mirae Asset:\n\n" + summaryLines;
           $("veil").classList.add("show");
           $("mok").focus();
 
-          S.slotId = null;
           S.selectedEvents = {};
-          await selectBranch(S.activeBranchCode);
+          await fetchBranchEvents(S.activeBranchCode);
+          drawOffices();
 
         } catch (err) {
           showNote(err.message);
           if (err.status === 409 && S.activeBranchCode) {
-            await selectBranch(S.activeBranchCode);
+            await fetchBranchEvents(S.activeBranchCode);
+            drawOffices();
           }
         } finally {
           S.submitting = false;
           $("go").disabled = false;
-          $("go").textContent = "Daftar & Atur Jadwal";
+          $("go").textContent = "Daftar Acara";
         }
       });
 
